@@ -5,13 +5,14 @@ use std::fs;
 
 #[derive(Debug, Clone)]
 pub struct Post {
-    pub date: chrono::NaiveDateTime,
+    pub name: String,
+    pub date_time: chrono::NaiveDateTime,
     pub path: std::path::PathBuf,
 }
 
 impl Post {
-    pub fn new(date: chrono::NaiveDateTime, path: std::path::PathBuf) -> Self {
-        Post { date, path }
+    pub fn new(name: String, date_time: chrono::NaiveDateTime, path: std::path::PathBuf) -> Self {
+        Post { name, date_time, path }
     }
 }
 
@@ -25,28 +26,35 @@ pub fn init_posts() -> HashMap<String, Post> {
     for path in post_paths {
         // get the path
         let path = path.unwrap().path();
-        let contents = fs::read_to_string(&path).unwrap();
-        let fragment = Html::parse_fragment(&contents);
 
-        // parse title
-        let mut title = String::new();
-        let title_selector = Selector::parse("title").unwrap();
+        // get the filename
+        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        if filename.ends_with("html") {
+            // read the file
+            let contents = fs::read_to_string(&path).unwrap();
+            let fragment = Html::parse_fragment(&contents);
 
-        for element in fragment.select(&title_selector) {
-            title = element.inner_html().to_string()
+            // parse title
+            let mut title = String::new();
+            let title_selector = Selector::parse("title").unwrap();
+            for element in fragment.select(&title_selector) {
+                title = element.inner_html().to_string()
+            }
+
+            // parse date
+            let mut date: NaiveDateTime = NaiveDateTime::default();
+            let date_selector = Selector::parse("p.date").unwrap();
+            for element in fragment.select(&date_selector) {
+                // this is fragile
+                let date_string: String = element.inner_html()[9..].to_string();
+                date = NaiveDateTime::parse_from_str(&date_string, "%Y-%m-%d %a %H:%M").unwrap();
+            }
+
+            posts.insert(
+                filename,
+                Post::new(title, date, path.to_path_buf()),
+            );
         }
-
-        // parse date
-        let mut date: NaiveDateTime = NaiveDateTime::default();
-        let date_selector = Selector::parse("p.date").unwrap();
-
-        for element in fragment.select(&date_selector) {
-            // this is fragile
-            let date_string: String = element.inner_html()[9..].to_string();
-            date = NaiveDateTime::parse_from_str(&date_string, "%Y-%m-%d %a %H:%M").unwrap();
-        }
-
-        posts.insert(title, Post::new(date, path.to_path_buf()));
     }
 
     posts

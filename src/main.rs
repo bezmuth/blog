@@ -5,12 +5,15 @@ use minijinja::{Environment, context};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::fs;
+use tower_http::services::ServeDir;
 
 mod posts;
 
 struct AppState {
     env: Environment<'static>,
-    // using the title as an identifier for a post isn't best practice but meh
+    // this is essentially the metadata system, its needed right now for sorting
+    // blogposts but in the future I think i'll be able to adapat it to rss. key
+    // is just the filename of the blogpost
     posts: HashMap<String, posts::Post>,
 }
 
@@ -41,6 +44,7 @@ async fn main() {
         .route("/blog", get(handler_blog_index))
         .route("/blog/{post}", get(handler_blog_post))
         .route("/about", get(handler_about))
+        .nest_service("/assets", ServeDir::new("assets"))
         .with_state(app_state);
 
     // run it
@@ -71,12 +75,16 @@ async fn handler_blog_index(
 
     // we have to sort the posts based on creation date, as we just pull in
     // posts from a directory (and store them in a hashmap) we cannot rely on ordering
+    //
+    // I could probably generate this at application start (like with post
+    // metadata) but I don't think its super intensive (yet). I can also easily
+    // adapt this into an atom feed builder
     let mut post_vec: Vec<(String, posts::Post)> = state.posts.clone().into_iter().collect();
-    post_vec.sort_by(|a, b| b.1.date.cmp(&a.1.date));
-    // then we construct a vec of links
-    let link_vec: Vec<String> = post_vec
+    post_vec.sort_by(|a, b| b.1.date_time.cmp(&a.1.date_time));
+    // then we construct a vec of 'posts' to be consumed by the template
+    let link_vec: Vec<(String, String, String)> = post_vec
         .into_iter()
-        .map(|x| format!("<a href=\"blog/{}\">{}</a>", x.0, x.0))
+        .map(|x| (x.0, x.1.name, x.1.date_time.date().to_string()))
         .collect();
 
     let rendered = template
@@ -91,19 +99,23 @@ async fn handler_blog_index(
 
 async fn handler_blog_post(
     State(state): State<Arc<AppState>>,
-    Path(title): Path<String>,
+    Path(filename): Path<String>,
 ) -> Result<Html<String>, StatusCode> {
-    let template = state.env.get_template("blogpost").unwrap();
-    let post = state.posts.get(&title).unwrap();
-    let blog_post = fs::read_to_string(post.clone().path).await.unwrap();
+    if let Some(post) = state.posts.get(&filename){
+        let template = state.env.get_template("blogpost").unwrap();
+        let post_content = fs::read_to_string(post.clone().path).await.unwrap();
 
-    let rendered = template
-        .render(context! {
-            blog_post,
-        })
-        .unwrap();
+        let rendered = template
+            .render(context! {
+                title => post.name,
+                blog_post => post_content,
+            })
+            .unwrap();
 
-    Ok(Html(rendered))
+        Ok(Html(rendered))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
 }
 
 async fn handler_about(State(state): State<Arc<AppState>>) -> Result<Html<String>, StatusCode> {
