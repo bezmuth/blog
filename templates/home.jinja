@@ -1,0 +1,15 @@
+{% extends "layout" %}
+{% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block body %}
+<h1>{{ title }}</h1>
+<p>{{ welcome_text }}</p>
+<br>
+<p> Check out my:
+<ul>
+<li> <a href="/blog"> blog</a> </li>
+<li> <a href="https://github.com/bezmuth">github</a> </li>
+<li> <a href="/about">about page</a> </li>
+<li> (self hosted 😎) <a href="https://social.bezmuth.uk/@bezmuth">fediverse account</a> </li>
+</ul>
+</p>
+{% endblock %}

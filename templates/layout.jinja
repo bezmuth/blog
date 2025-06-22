@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{% block title %}Bezmuth's Website{% endblock %}</title>
+
+    <style>
+      * {
+          margin: 0 auto;
+          padding: 0;
+          max-width: 80ch;
+          font-family: monospace;
+      }
+
+      blockquote {
+          padding: 1ch;
+          font-style: italic;
+          background: rgb(206,206,206);
+      }
+
+      .navbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          top: 0px;
+          background: grey;
+          background-blend-mode: darken;
+          background-size: cover;
+          color: white;
+          padding: 10px 20px;
+      }
+
+      .nav-list {
+          display: flex;
+          list-style: none;
+      }
+
+      .nav-list li {
+          margin-right: 20px;
+      }
+
+      .nav-list li:last-child {
+          margin-right: 0;
+      }
+
+      .nav-list li a {
+          color: white;
+          transition: color 0.3s ease-in-out;
+      }
+
+      .nav-list li a:hover {
+          color: black;
+      }
+
+      .main {
+          margin-top: 10px;
+          margin-bottom: 10px;
+      }
+
+      .footer {
+          text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <ul class="nav-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+    </nav>
+    <div class="main">
+      {% block body %}{% endblock %}
+    </div>
+  </body>
+  <footer>
+    <div class="footer">
+      <hr>
+      <p>Follow me on the <a href="https://social.bezmuth.uk/@bezmuth">fediverse</a></p>
+    </div>
+  </footer>
+</html>
