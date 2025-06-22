@@ -4,50 +4,37 @@
     <title>{% block title %}Bezmuth{% endblock %}</title>
 
     <style>
+      :root {
+          font-size: 16px;
+          margin: auto;
+      }
+
       * {
-          margin: 0 auto;
-          padding: 0;
           max-width: 80ch;
-          font-family: monospace;
+          font-family: Monospace;
       }
 
       blockquote {
-          padding: 1ch;
           font-style: italic;
-          background: rgb(206,206,206);
       }
 
-      .navbar {
+      .header {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          top: 0px;
+          justify-content: center;
           background: grey;
-          background-blend-mode: darken;
-          background-size: cover;
+      }
+      .header a {
           color: white;
-          padding: 10px 20px;
+          padding: 10px;
       }
 
-      .nav-list {
-          display: flex;
-          list-style: none;
-      }
-
-      .nav-list li {
-          margin-right: 20px;
-      }
-
-      .nav-list li:last-child {
-          margin-right: 0;
-      }
-
-      .nav-list li a {
+      .header a {
           color: white;
           transition: color 0.3s ease-in-out;
       }
 
-      .nav-list li a:hover {
+      .header a:hover {
           color: black;
       }
 
@@ -59,16 +46,17 @@
       .footer {
           text-align: center;
       }
+
     </style>
   </head>
   <body>
-    <nav class="navbar">
-      <ul class="nav-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/blog">Blog</a></li>
-        <li><a href="/about">About</a></li>
-      </ul>
-    </nav>
+    <div class="header">
+      <p>
+        <a href="/">Home</a>
+        <a href="/blog">Blog</a>
+        <a href="/about">About</a>
+      </p>
+    </div>
     <div class="main">
       {% block body %}{% endblock %}
     </div>

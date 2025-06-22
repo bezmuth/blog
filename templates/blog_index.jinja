@@ -2,9 +2,10 @@
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
 {% block body %}
 <h1>{{ title }}</h1>
-{% for post in entries %}
+<p><a href=feed.atom>feed</a></p>
 <ul>
-    <li><a href=blog/{{ post[0] }}> {{ post[1] }} </a> {{ post[2] }}</li>
-</ul>
+{% for post in entries %}
+    <li><a href=blog/{{ post[0] }}> {{ post[1] }}</a> {{ post[2] }}</li>
 {% endfor %}
+</ul>
 {% endblock %}

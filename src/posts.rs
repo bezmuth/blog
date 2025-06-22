@@ -12,7 +12,11 @@ pub struct Post {
 
 impl Post {
     pub fn new(name: String, date_time: chrono::NaiveDateTime, path: std::path::PathBuf) -> Self {
-        Post { name, date_time, path }
+        Post {
+            name,
+            date_time,
+            path,
+        }
     }
 }
 
@@ -50,10 +54,7 @@ pub fn init_posts() -> HashMap<String, Post> {
                 date = NaiveDateTime::parse_from_str(&date_string, "%Y-%m-%d %a %H:%M").unwrap();
             }
 
-            posts.insert(
-                filename,
-                Post::new(title, date, path.to_path_buf()),
-            );
+            posts.insert(filename, Post::new(title, date, path.to_path_buf()));
         }
     }
 

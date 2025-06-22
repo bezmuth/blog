@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title>bezmuth.uk</title>
+  <link rel="self" href="https://bezmuth.uk/feed.atom" />
+  <link href="https://bezmuth.uk/" />
+  <updated>{{ last_post_date }}</updated>
+  <author>
+    <name>Bezmuth</name>
+  </author>
+  <id>https://bezmuth.uk/</id>
+
+{% for post in entries %}
+<entry>
+    <title>{{ post[1] }}</title>
+    <link href="https://bezmuth.uk/blog/{{ post[0] }}"/>
+    <id>https://bezmuth.uk/blog/{{ post[0] }}</id>
+    <updated>{{ post[2] }}</updated>
+</entry>
+{% endfor %}
+
+</feed>
