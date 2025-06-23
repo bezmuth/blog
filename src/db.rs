@@ -6,6 +6,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::str;
 
+// Post metadata is stored in a database alongside the posts because if I cannot
+// know the timezone the blogposts were written in, we pull from the local
+// timezone when the posts were added instead and then store that in the
+// database
+
 #[derive(Debug, Clone, Encode, Decode)]
 pub struct Post {
     pub name: String,
@@ -41,7 +46,7 @@ impl Metadata {
         Ok(meta)
     }
 
-    pub fn get_post(self: Self, filename: &str) -> Option<Post> {
+    pub fn get_post(self, filename: &str) -> Option<Post> {
         if let Ok(Some(bins)) = self.db.get(filename) {
             Some(
                 bincode::decode_from_slice(&bins[..], bincode::config::standard())
@@ -49,14 +54,14 @@ impl Metadata {
                     .0,
             )
         } else {
-            return None;
+            None
         }
     }
 
-    pub fn add_post(self: &Self, path: PathBuf) {
+    pub fn add_post(&self, path: PathBuf) {
         // get the filename
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
-        if filename.ends_with("html") {
+        if filename.ends_with("html") && !self.db.contains_key(&filename).unwrap() {
             // read the file
             let contents = fs::read_to_string(&path).unwrap();
             let fragment = Html::parse_fragment(&contents);
@@ -93,7 +98,7 @@ impl Metadata {
     /// ordering)
     ///
     /// Passing a None to the format string formats the datetime in rfc3339
-    pub fn get_posts_sorted(self: Self, format: Option<&str>) -> Vec<(String, String, String)> {
+    pub fn get_posts_sorted(self, format: Option<&str>) -> Vec<(String, String, String)> {
         let mut posts: Vec<_> = self
             .db
             .into_iter()

@@ -8,14 +8,10 @@ use tower_http::services::ServeDir;
 
 mod db;
 
-// Due to the nature of me extracting the time for each post from the orgmode
-// html I cannot know the timezone, so I have to presume the local timezone,
-// this is fine however each time we restart the program it rebuilds the hashmap
-// with the current local timezone, so if the timezone changes and we pass out a
-// new atom feed some readers may see it as an update.
+//  I've shifted to storing the post metadata in a database, i can just watch
+//  the posts folder now but I'm not sure if theres any need
 //
-// TODO: store post information in a database, and watch the posts dir for any
-// changes to add new blogposts
+// TODO: watch the posts dir for any changes to add new blogposts
 //
 // NOTES: There is a lot of unwrap usage in this program, as I'm the only one
 // using it and I want to be able to understand failures (i.e. I messed up
