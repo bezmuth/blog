@@ -99,6 +99,8 @@ impl Metadata {
     ///
     /// Passing a None to the format string formats the datetime in rfc3339
     pub fn get_posts_sorted(self, format: Option<&str>) -> Vec<(String, String, String)> {
+        // I was a bit worried about how long this function would take, but its
+        // only a couple of hundered microseconds on --release
         let mut posts: Vec<_> = self
             .db
             .into_iter()
@@ -118,13 +120,10 @@ impl Metadata {
 
         posts
             .into_iter()
-            // NOTE: this isnt really a proper converter to the atom time standard,
-            // it does not consider time zones
             .map(|(filename, name, date_time, _)| {
-                let date = if let Some(format) = format {
-                    date_time.format(format).to_string()
-                } else {
-                    date_time.to_rfc3339()
+                let date = match format {
+                    Some(fmt) => date_time.format(fmt).to_string(),
+                    None => date_time.to_rfc3339(),
                 };
                 (String::from_utf8_lossy(&filename).to_string(), name, date) // sketchy
             })
