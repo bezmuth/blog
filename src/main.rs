@@ -2,14 +2,20 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Router, response::Html, routing::get};
 use minijinja::{Environment, context};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::fs;
 use tower_http::services::ServeDir;
 
-mod posts;
+mod db;
 
-// TODO: proper timezone handling
+// Due to the nature of me extracting the time for each post from the orgmode
+// html I cannot know the timezone, so I have to presume the local timezone,
+// this is fine however each time we restart the program it rebuilds the hashmap
+// with the current local timezone, so if the timezone changes and we pass out a
+// new atom feed some readers may see it as an update.
+//
+// TODO: store post information in a database, and watch the posts dir for any
+// changes to add new blogposts
 //
 // NOTES: There is a lot of unwrap usage in this program, as I'm the only one
 // using it and I want to be able to understand failures (i.e. I messed up
@@ -18,10 +24,7 @@ mod posts;
 
 struct AppState {
     env: Environment<'static>,
-    // this is essentially the metadata system, its needed right now for sorting
-    // blogposts for both the index and the atom feed. key is just the filename
-    // of the blogpost
-    posts: HashMap<String, posts::Post>,
+    metadata: db::Metadata,
 }
 
 #[tokio::main]
@@ -44,7 +47,7 @@ async fn main() {
     // pass env to handlers via state
     let app_state = Arc::new(AppState {
         env,
-        posts: posts::init_posts(),
+        metadata: db::Metadata::new().unwrap(),
     });
 
     // define routes
@@ -76,40 +79,12 @@ async fn handler_home(State(state): State<Arc<AppState>>) -> Result<Html<String>
     Ok(Html(rendered))
 }
 
-/// This function takes a vector of links and their post metadata and returns a list of them sorted by date
-///
-/// This is neccessary as we pull the posts from a directory (no garuntee of
-/// ordering) and we store the post metadata in hashmap (again, no garuntee of
-/// ordering) It may be better to store this in the state and generate it at
-/// startup, but for now this is sufficient.
-fn get_posts_sorted(
-    mut posts: Vec<(String, posts::Post)>,
-    date_format: &str,
-) -> Vec<(String, String, String)> {
-    posts.sort_by(|a, b| b.1.date_time.cmp(&a.1.date_time));
-
-    posts
-        .into_iter()
-        // NOTE: this isnt really a proper converter to the atom time standard,
-        // it does not consider time zones
-        .map(|(link, post)| {
-            let date = post.date_time.format(date_format).to_string(); // lets just pretend im always in gmt
-            (link, post.name, date)
-        })
-        .collect()
-}
-
 async fn handler_blog_index(
     State(state): State<Arc<AppState>>,
 ) -> Result<Html<String>, StatusCode> {
-    let template = state
-        .env
-        .get_template("blog_index")
-        .unwrap();
+    let template = state.env.get_template("blog_index").unwrap();
 
-    let posts: Vec<_> = state.posts.clone().into_iter().collect();
-
-    let entries = get_posts_sorted(posts, "%Y-%m-%d");
+    let entries = state.metadata.clone().get_posts_sorted(Some("%Y-%m-%d"));
 
     let rendered = template
         .render(context! {
@@ -122,14 +97,9 @@ async fn handler_blog_index(
 }
 
 async fn handler_feed(State(state): State<Arc<AppState>>) -> Result<String, StatusCode> {
-    let template = state
-        .env
-        .get_template("atom")
-        .unwrap();
+    let template = state.env.get_template("atom").unwrap();
 
-    let posts: Vec<_> = state.posts.clone().into_iter().collect();
-
-    let entries = get_posts_sorted(posts, "%Y-%m-%dT%H:%M:%SZ");
+    let entries = state.metadata.clone().get_posts_sorted(None);
 
     let mut last_post_date = String::new();
     if let Some(last_post) = entries.first() {
@@ -140,7 +110,8 @@ async fn handler_feed(State(state): State<Arc<AppState>>) -> Result<String, Stat
         .render(context! {
             last_post_date,
             entries,
-        }).unwrap();
+        })
+        .unwrap();
     Ok(rendered)
 }
 
@@ -148,11 +119,8 @@ async fn handler_blog_post(
     State(state): State<Arc<AppState>>,
     Path(filename): Path<String>,
 ) -> Result<Html<String>, StatusCode> {
-    if let Some(post) = state.posts.get(&filename) {
-        let template = state
-            .env
-            .get_template("blogpost")
-            .unwrap();
+    if let Some(post) = state.metadata.clone().get_post(&filename) {
+        let template = state.env.get_template("blogpost").unwrap();
         let post_content = fs::read_to_string(post.clone().path)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -171,10 +139,7 @@ async fn handler_blog_post(
 }
 
 async fn handler_about(State(state): State<Arc<AppState>>) -> Result<Html<String>, StatusCode> {
-    let template = state
-        .env
-        .get_template("about")
-        .unwrap();
+    let template = state.env.get_template("about").unwrap();
 
     let rendered = template
         .render(context! {
