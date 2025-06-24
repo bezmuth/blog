@@ -11,4 +11,20 @@
 <li> (self hosted 😎) <a href="https://social.bezmuth.uk/@bezmuth">fediverse account</a> </li>
 </ul>
 </p>
+<hr>
+<div class="flex-container">
+  <div class="flex-child magenta">
+    <h3>Blog posts</h3>
+    <ul>
+    {% for post in entries %}
+       <li><a href=blog/{{ post[0] }}> {{ post[1] }}</a> {{ post[2] }}</li>
+    {% endfor %}
+    </ul>
+  </div>
+
+  <div class="flex-child green">
+    <h3>Git activity</h3>
+  </div>
+
+</div>
 {% endblock %}
