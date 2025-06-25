@@ -73,7 +73,7 @@ async fn handler_home(State(state): State<Arc<AppState>>) -> Result<Html<String>
     let rendered = template
         .render(context! {
             title => "Bezmuth",
-            welcome_text => "Software dev, open source contributor, writer of blogs, div centerer, destroyer of worlds, etc etc",
+            welcome_text => "Software dev, open source contributor, blog writer, div centerer, destroyer of worlds, etc., etc.",
             entries,
         })
         .unwrap();
