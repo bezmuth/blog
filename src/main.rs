@@ -1,10 +1,11 @@
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::{Router, response::Html, routing::get};
+use axum::handler::Handler;
+use axum::http::{header, HeaderMap, StatusCode};
+use axum::{Router, response::Html, response::IntoResponse, routing::get};
 use minijinja::{Environment, context};
 use std::sync::Arc;
 use tokio::fs;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 mod db;
 
@@ -49,6 +50,9 @@ async fn main() {
         metadata: db::Metadata::new().unwrap(),
     });
 
+    let favicon = std::fs::read_to_string("assets/favicon.svg").unwrap();
+    let style = std::fs::read_to_string("assets/style.css").unwrap();
+
     // define routes
     let app = Router::new()
         .route("/", get(handler_home))
@@ -56,6 +60,8 @@ async fn main() {
         .route("/blog/{post}", get(handler_blog_post))
         .route("/feed.atom", get(handler_feed))
         .route("/about", get(handler_about))
+        .route("/favicon.svg", get(handler_asset_file).with_state((favicon.leak(), "image/svg+xml")))
+        .route("/style.css", get(handler_asset_file).with_state((style.leak(), "text/css")))
         .nest_service("/assets", ServeDir::new("assets"))
         .with_state(app_state);
 
@@ -63,6 +69,15 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+// the ServeFile hyper service is extremely slow (its essentially a wrapper
+// around servedir) so instead I preload the important asset files and serve
+// them from here using the provided content type
+pub async fn handler_asset_file(State(state): State<(&'static str, &'static str)>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, state.1.parse().unwrap());
+    (headers, state.0.to_string())
 }
 
 async fn handler_home(State(state): State<Arc<AppState>>) -> Result<Html<String>, StatusCode> {
