@@ -1,5 +1,12 @@
 use octocrab::{
-    models::{self, events::{payload::{EventPayload::PushEvent, PushEventPayload, WrappedEventPayload}, EventType}}, Octocrab, Page
+    Octocrab, Page,
+    models::{
+        self,
+        events::{
+            EventType,
+            payload::{EventPayload::PushEvent, PushEventPayload, WrappedEventPayload},
+        },
+    },
 };
 
 pub struct PushInfo {
@@ -31,7 +38,8 @@ pub async fn get_user_events() -> octocrab::Result<()> {
                     println!("{:?}, {}", amount, repo);
                 }
             }
-        }).collect();
+        })
+        .collect();
 
     Ok(())
 }

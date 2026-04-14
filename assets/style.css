@@ -1,8 +1,6 @@
 :root {
     font-size: 16px;
     margin: auto;
-}
-* {
     max-width: 800px;
     font-family: Monospace;
 }
@@ -44,11 +42,11 @@ hr::before {
     margin:-0.5rem;
 }
 .header a {
-    color: white;
+    color: black;
     padding: 10px;
 }
 .header a:hover {
-    color: black;
+    color: white;
 }
 .main {
     margin-top: 10px;
