@@ -2,12 +2,12 @@ use axum::extract::{Path, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::{Router, response::Html, response::IntoResponse, routing::get};
 use minijinja::{Environment, context};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use tokio::fs;
 use tower_http::services::ServeDir;
 
 mod db;
-mod github;
+//mod github;
 
 //  I've shifted to storing the post metadata in a database, i can just watch
 //  the posts folder now but I'm not sure if theres any need
@@ -24,7 +24,7 @@ mod github;
 struct AppState {
     env: Environment<'static>,
     metadata: db::Metadata,
-    github_actions: Arc<RwLock<Vec<String>>>,
+    //github_actions: Arc<RwLock<Vec<String>>>,
 }
 
 #[tokio::main]
@@ -48,7 +48,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         env,
         metadata: db::Metadata::new().unwrap(),
-        github_actions: Arc::new(RwLock::new(Vec::new())),
+        //github_actions: Arc::new(RwLock::new(Vec::new())),
     });
 
     // github setup

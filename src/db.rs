@@ -1,4 +1,4 @@
-use bincode::{Decode, Encode};
+use oxicode::{Decode, Encode};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
 use scraper::{Html, Selector};
 use sled::Db;
@@ -45,7 +45,7 @@ impl Metadata {
     fn get_post(self, filename: &str) -> Option<Post> {
         if let Ok(Some(bins)) = self.db.get(filename) {
             Some(
-                bincode::decode_from_slice(&bins[..], bincode::config::standard())
+                oxicode::decode_from_slice(&bins[..])
                     .unwrap()
                     .0,
             )
@@ -90,7 +90,7 @@ impl Metadata {
             }
 
             let post = Post::new(title, date);
-            let bins = bincode::encode_to_vec(post, bincode::config::standard()).unwrap();
+            let bins = oxicode::encode_to_vec(&post).unwrap();
             self.db.insert(filename, bins).unwrap();
         }
     }
@@ -116,7 +116,7 @@ impl Metadata {
             .map(|x| {
                 let (filename, val) = x.unwrap();
                 // decode the post data form the db
-                let post: Post = bincode::decode_from_slice(&val[..], bincode::config::standard())
+                let post: Post = oxicode::decode_from_slice(&val[..])
                     .unwrap()
                     .0;
                 // convert the string into datetime so we can easily sort
