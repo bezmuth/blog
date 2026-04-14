@@ -1,5 +1,5 @@
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::{Router, response::Html, response::IntoResponse, routing::get};
 use minijinja::{Environment, context};
 use std::sync::{Arc, RwLock};
@@ -11,7 +11,6 @@ mod github;
 
 //  I've shifted to storing the post metadata in a database, i can just watch
 //  the posts folder now but I'm not sure if theres any need
-//
 //
 // NOTES: There is a lot of unwrap usage in this program, as I'm the only one
 // using it and I want to be able to understand failures (i.e. I messed up
@@ -56,8 +55,10 @@ async fn main() {
     //github::get_user_events().await.unwrap();
 
     // static file setup
-    let favicon = std::fs::read_to_string("assets/favicon.svg").unwrap();
-    let style = std::fs::read_to_string("assets/style.css").unwrap();
+    let favicon = std::fs::read_to_string("assets/favicon.svg")
+        .unwrap()
+        .leak();
+    let style = std::fs::read_to_string("assets/style.css").unwrap().leak();
 
     // define routes
     let app = Router::new()
@@ -68,11 +69,11 @@ async fn main() {
         .route("/about", get(handler_about))
         .route(
             "/favicon.svg",
-            get(handler_asset_file).with_state((favicon.leak(), "image/svg+xml")),
+            get(handler_asset_file).with_state((favicon, "image/svg+xml")),
         )
         .route(
             "/style.css",
-            get(handler_asset_file).with_state((style.leak(), "text/css")),
+            get(handler_asset_file).with_state((style, "text/css")),
         )
         .nest_service("/assets", ServeDir::new("assets"))
         .with_state(app_state);
@@ -97,7 +98,15 @@ pub async fn handler_asset_file(
 async fn handler_home(State(state): State<Arc<AppState>>) -> Result<Html<String>, StatusCode> {
     let template = state.env.get_template("home").unwrap();
 
-    let entries = &state.metadata.clone().get_posts_sorted(Some("%Y-%m-%d"))[0..10];
+    let mut len = state
+        .metadata
+        .clone()
+        .get_posts_sorted(Some("%Y-%m-%d"))
+        .len();
+    if len > 10 {
+        len = 10;
+    }
+    let entries = &state.metadata.clone().get_posts_sorted(Some("%Y-%m-%d"))[0..len];
 
     let rendered = template
         .render(context! {
@@ -127,7 +136,7 @@ async fn handler_blog_index(
     Ok(Html(rendered))
 }
 
-async fn handler_feed(State(state): State<Arc<AppState>>) -> Result<String, StatusCode> {
+async fn handler_feed(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let template = state.env.get_template("atom").unwrap();
 
     let entries = state.metadata.clone().get_posts_sorted(None);
@@ -137,13 +146,18 @@ async fn handler_feed(State(state): State<Arc<AppState>>) -> Result<String, Stat
         last_post_date.clone_from(&last_post.2);
     }
 
-    let rendered = template
+    let mut response = template
         .render(context! {
             last_post_date,
             entries,
         })
-        .unwrap();
-    Ok(rendered)
+        .unwrap()
+        .into_response();
+    response.headers_mut().insert(
+        "content-type",
+        HeaderValue::from_static("application/atom+xml"),
+    );
+    return response;
 }
 
 async fn handler_blog_post(
